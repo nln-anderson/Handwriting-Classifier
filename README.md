@@ -3,5 +3,6 @@ As we move into the future, more and more mathematical and scientific papers are
 # Machine Learning Model for Symbol Recognition
 The first step of this project is to create a machine learning model that can effectively classify characters. To do this, I used the following dataset from https://www.kaggle.com/datasets/xainano/handwrittenmathsymbols. It consists of 82 different characters, from greek letters to operations symbols.
 # Data Transforms
-I transformed all the images to grayscale, since color is irrelevent in this situation. I also normalized the grayscale values to ensure stability within the gradient calculations. 
+I transformed all the images to grayscale, since color is irrelevent in this situation. I also normalized the grayscale values to ensure stability within the gradient calculations.
+
 
