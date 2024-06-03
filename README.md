@@ -4,5 +4,10 @@ As we move into the future, more and more mathematical and scientific papers are
 The first step of this project is to create a machine learning model that can effectively classify characters. To do this, I used the following dataset from https://www.kaggle.com/datasets/xainano/handwrittenmathsymbols. It consists of 82 different characters, from greek letters to operations symbols.
 # Data Transforms
 I transformed all the images to grayscale, since color is irrelevent in this situation. I also normalized the grayscale values to ensure stability within the gradient calculations.
+# Viewing the Data
+To get a feel for the data, I printed one example from each class. Take a look at the image.
+(Image Here)
+I noticed that the "times" and "x" class were almost indistinguishable. They both were x's. And so, I combined them into one class for the model. Similarly, "1" and "ascii_124" looked almost idential, so I combined them into one class as well, under the label "1." In terms of data balancing, I counted the number of instances of each class.
+
 
 
