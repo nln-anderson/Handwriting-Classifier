@@ -120,8 +120,8 @@ def predict():
     img = img.unsqueeze(0).to(device)  # Add batch dimension and move to device
 
     # Visualize the preprocessed image
-    plt.imshow(img.cpu().squeeze(), cmap='gray')
-    plt.show()
+    # plt.imshow(img.cpu().squeeze(), cmap='gray')
+    # plt.show()
 
     # Perform inference
     with torch.no_grad():
