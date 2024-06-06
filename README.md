@@ -7,7 +7,7 @@ I transformed all the images to grayscale, since color is irrelevent in this sit
 # Viewing the Data
 To get a feel for the data, I printed one example from each class. Take a look at the image.
 (Image Here)
-I noticed that the "times" and "x" class were almost indistinguishable. They both were x's. And so, I combined them into one class for the model. Similarly, "1" and "ascii_124" looked almost idential, so I combined them into one class as well, under the label "1." In terms of data balancing, I counted the number of instances of each class.
+I noticed that the "times" and "x" class were almost indistinguishable. They both were x's. And so, I combined them into one class for the model. Similarly, "1" and "ascii_124" looked almost idential, so I combined them into one class as well, under the label "1." In terms of data balancing, I counted the number of instances of each class and saw that things were very imbalanced. I utilized Pytorch weighted sampling to ensure that each patch contained equal representation of each class.
 
 
 
