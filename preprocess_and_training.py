@@ -112,6 +112,7 @@ def show_batch(dl):
 show_batch(train_dl)
 plt.show()
 
+raise ValueError
 # Network Building
 class MathNet(nn.Module):
     def __init__(self):
