@@ -1,5 +1,8 @@
 # Handwriting Classifier - Classifying Handwritten Math Symbols
 As we move into the future, more and more mathematical and scientific papers are created digitally. Personally, I used LaTeX and other coding languages to create organized write-ups for math content during undergraduate. I always wished there was an effective way to convert papers I wrote by hand into LaTeX documents. The goal of this project was to create such a program. The subproblem would be to create a program that can first classify individual handwritten symbols. This is what we will focus on for the time being. Do note that this readme file was written after completeting the program. There were many trials and errors along the way, from network models that wouldn't converge, to not properly preprocessing data. This write-up reflects the final process I used.
+
+Demonstration:
+![Prediction Example](images_and_documents/beta.png)
 # Machine Learning Model for Symbol Recognition
 The first step of this project was to create a machine learning model that can effectively classify characters. To do this, I used the following dataset from https://www.kaggle.com/datasets/xainano/handwrittenmathsymbols. It consisted of 82 different characters, from greek letters to operations symbols. This is exactly what I was looking for.
 # Data Transforms
