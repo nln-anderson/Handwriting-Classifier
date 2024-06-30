@@ -32,38 +32,27 @@ model.load_state_dict(torch.load(PATH))
 model.eval()  # Set the model to evaluation mode
 
 # Load the image in grayscale
-image = cv2.imread('test_image.jpg', cv2.IMREAD_GRAYSCALE)
+image = cv2.imread('test_image_processed.jpg', cv2.IMREAD_GRAYSCALE)
 print("Original Image Loaded:")
 plt.imshow(image, cmap='gray')
 plt.title('Original Image')
 plt.show()
 
-# Apply adaptive thresholding
-binary_image = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
-print("Binary Image after Adaptive Thresholding:")
-plt.imshow(binary_image, cmap='gray')
-plt.title('Binary Image after Adaptive Thresholding')
-plt.show()
-
-# Advanced noise reduction
-binary_image = cv2.GaussianBlur(binary_image, (5, 5), 0)
-print("Binary Image after Gaussian Blur:")
-plt.imshow(binary_image, cmap='gray')
-plt.title('Binary Image after Gaussian Blur')
-plt.show()
-
-binary_image = cv2.medianBlur(binary_image, 3)
-print("Binary Image after Median Blur:")
-plt.imshow(binary_image, cmap='gray')
-plt.title('Binary Image after Median Blur')
+# Preprocess the image: Apply GaussianBlur and thresholding
+blurred = cv2.GaussianBlur(image, (5, 5), 0)
+_, thresholded = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+print("Thresholded Image:")
+plt.imshow(thresholded, cmap='gray')
+plt.title('Thresholded Image')
 plt.show()
 
 # Find contours of the symbols
-contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+contours, _ = cv2.findContours(thresholded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 print(f"Total Contours Found: {len(contours)}")
 
+# Filter contours by area
 min_contour_area = 100  # Adjust this value based on your images
-max_contour_area = 1000  # Upper limit to ignore noise
+max_contour_area = 10000  # Upper limit to ignore noise
 contours = [cnt for cnt in contours if min_contour_area < cv2.contourArea(cnt) < max_contour_area]
 print(f"Contours after Filtering by Area: {len(contours)}")
 
@@ -78,11 +67,22 @@ for cnt in contours:
 contours = filtered_contours
 print(f"Contours after Filtering by Aspect Ratio: {len(contours)}")
 
+# Draw bounding boxes around the detected contours on the original image
+contour_image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # Convert to color image to draw colored boxes
+for cnt in contours:
+    x, y, w, h = cv2.boundingRect(cnt)
+    cv2.rectangle(contour_image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+print("Image with Contours:")
+plt.imshow(contour_image)
+plt.title('Image with Contours')
+plt.show()
+
 # Extract and resize symbols
 symbols = []
 for cnt in contours:
     x, y, w, h = cv2.boundingRect(cnt)
-    symbol_image = binary_image[y:y+h, x:x+w]
+    symbol_image = image[y:y+h, x:x+w]
     resized_symbol = cv2.resize(symbol_image, (45, 45))
     symbols.append((x, y, w, h, resized_symbol))
     print(f"Symbol extracted at (x: {x}, y: {y}, w: {w}, h: {h})")
