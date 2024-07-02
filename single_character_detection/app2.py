@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import torch
 import tkinter as tk
 from PIL import Image, ImageOps, ImageDraw
+import numpy as np
 
 # Network architecture
 class MathNet(nn.Module):
@@ -30,12 +31,17 @@ class MathNet(nn.Module):
         return x
 
 
+canvas_size = 200  # Canvas size in pixels
+img_size = 45  # Size of the image to match the model input
+
 class Model:
     """
     Backend operations of the application. Includes neural network and any image processing.
     """
     # Instance Vars
     classes: list # contains the labels for the dataset
+    image1: Image
+    draw: ImageDraw
 
     # Methods
     def __init__(self) -> None:
@@ -48,16 +54,38 @@ class Model:
            'sum', 'tan', 'theta', 'u', 'v', 'w', 'y', 'z', '{', '}']
         self.network = MathNet()
 
+        # Create an empty image and a drawing object
+        canvas_size = 200  # Canvas size in pixels
+        img_size = 45  # Size of the image to match the model input
+        image1 = Image.new('RGB', (canvas_size, canvas_size), 'white')
+        draw = ImageDraw.Draw(image1)
+        self.draw = draw
+        self.image1 = image1
+
         # Prepare network
         PATH = './math_net_with_weights_6.pth'
         self.network.load_state_dict(torch.load(PATH))
 
-    def predict() -> str:
+    def predict(self) -> str:
         """Feeds the input drawing from the UI into the neural network.
 
         Returns:
             str: Label for predicted output.
         """
+        img = self.image1.convert('L')
+        img = np.array(img)
+        threshold_value = 128
+        img = (img > threshold_value) * 255  # Binarize the image
+        img = Image.fromarray(img.astype(np.uint8))
+        img = self.preprocess(img)
+        img = img.unsqueeze(0).to(self.device)
+
+        with torch.no_grad():
+            output = self.network(img)
+            predicted_class_idx = torch.argmax(output).item()
+            predicted_class_name = self.classes[predicted_class_idx]
+
+        return predicted_class_name
 
 class View(tk.Frame):
     """
@@ -109,3 +137,39 @@ class Controller:
     """
     Conencts the controller and the view classes.
     """
+    # Instance variables
+    model: Model
+    view: View
+
+    # Methods
+    def __init__(self, model: Model, view: View) -> None:
+        self.model = model
+        self.view = view
+    
+    # Function to draw on the canvas
+    def paint(self, event) -> None:
+        x1, y1 = (event.x - 1), (event.y - 1)
+        x2, y2 = (event.x + 1), (event.y + 1)
+        self.view.canvas.create_oval(x1, y1, x2, y2, fill='black', width=1)  # Pen stroke width reduced
+        self.model.draw.line([x1, y1, x2, y2], fill='black', width=2)  # Pen stroke width reduced
+
+    # Function to clear the canvas
+    def clear_canvas(self) -> None:
+        self.view.canvas.delete("all")
+        self.model.draw.rectangle([0, 0, canvas_size, canvas_size], fill='white')
+
+    # Prediction of image
+    def predict(self) -> None:
+        prediction = self.model.predict()
+        self.view.result_label.config(text=f"Predicted: {prediction}")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.title("Symbol Recognition")
+
+    model = Model()
+    view = View(root, Controller(model, view=None))
+    controller = Controller(model, view)
+    view.controller = controller
+
+    root.mainloop()
