@@ -146,4 +146,3 @@ result_label.pack()
 
 # Run the Tkinter main loop
 root.mainloop()
-

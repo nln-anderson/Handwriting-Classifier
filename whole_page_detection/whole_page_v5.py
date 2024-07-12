@@ -32,18 +32,24 @@ model.load_state_dict(torch.load(PATH))
 model.eval()  # Set the model to evaluation mode
 
 # Load the image in grayscale
-image = cv2.imread('test_image_processed.jpg', cv2.IMREAD_GRAYSCALE)
+image = cv2.imread('test_image_processed_crop.jpg', cv2.IMREAD_GRAYSCALE)
 print("Original Image Loaded:")
 plt.imshow(image, cmap='gray')
 plt.title('Original Image')
 plt.show()
 
 # Preprocess the image: Apply GaussianBlur and thresholding
-blurred = cv2.GaussianBlur(image, (5, 5), 0)
+blurred = cv2.GaussianBlur(image, (55, 55), 0)
 _, thresholded = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 print("Thresholded Image:")
 plt.imshow(thresholded, cmap='gray')
 plt.title('Thresholded Image')
+plt.show()
+
+# Canny Edge Detection
+canny = cv2.Canny(blurred, 120, 255, 1)
+plt.imshow(canny, cmap="gray")
+plt.title('Canny Image')
 plt.show()
 
 # Find contours of the symbols
@@ -51,21 +57,21 @@ contours, _ = cv2.findContours(thresholded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_
 print(f"Total Contours Found: {len(contours)}")
 
 # Filter contours by area and aspect ratio
-min_contour_area = 50  # Adjust this value based on your images
-max_contour_area = 10000  # Upper limit to ignore noise
-aspect_ratio_threshold = 3.0  # Adjust this value based on your symbols
-
 filtered_contours = []
-for cnt in contours:
-    x, y, w, h = cv2.boundingRect(cnt)
-    contour_area = cv2.contourArea(cnt)
-    aspect_ratio = float(w) / h
-    
-    if (min_contour_area < contour_area < max_contour_area and
-        1/aspect_ratio_threshold < aspect_ratio < aspect_ratio_threshold):
-        filtered_contours.append(cnt)
-
-print(f"Contours after Filtering by Area and Aspect Ratio: {len(filtered_contours)}")
+min_area = 90
+image_number = 0
+for c in contours:
+    area = cv2.contourArea(c)
+    if area > min_area:
+        x,y,w,h = cv2.boundingRect(c)
+        aspect_ratio = w / float(h)
+        if 0.3 < aspect_ratio < 10:  # Filter out extremely thin or wide contours
+            # filtered_contours.append((x, y, w, h))
+            # cv2.rectangle(image, (x, y), (x + w, y + h), (36, 255, 12), 2)
+            # ROI = image[y:y+h, x:x+w]
+            # cv2.imwrite("ROI_{}.png".format(image_number), ROI)
+            image_number += 1
+            filtered_contours.append(c)
 
 # Draw bounding boxes around the detected contours on the original image
 contour_image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # Convert to color image to draw colored boxes
@@ -136,4 +142,3 @@ results.sort(key=lambda k: (k[1], k[0]))
 # Combine symbols into a readable format
 recognized_text = ''.join([symbol for _, _, symbol in results])
 print("Recognized Text: ", recognized_text)
-
