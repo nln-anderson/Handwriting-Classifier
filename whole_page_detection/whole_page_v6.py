@@ -43,8 +43,9 @@ class Model:
     model: MathNet
     input_image: Image
     input_image_path: str
-    highlighted_image: Image
+    contour_image: Image
     symbols: list
+    converted_symbols: list
 
     # Methods
     def __init__(self) -> None:
@@ -62,8 +63,10 @@ class Model:
         self.image1 = Image.new('RGB', (200, 200), 'white')
         self.draw = ImageDraw.Draw(self.image1)
     
-    def find_symbols(self) -> list:
-
+    def find_symbols(self) -> None:
+        """
+        Finds contours within the image.
+        """
         # Preprocess the image
         image = cv2.imread(self.input_image_path, cv2.IMREAD_GRAYSCALE)
         blurred = cv2.GaussianBlur(image, (55, 55), 0)
@@ -97,7 +100,8 @@ class Model:
             cv2.rectangle(contour_image, (x, y), (x + w, y + h), (0, 255, 0), 2)
         
         # Save the image with rectangles to the model
-        self.highlighted_image = contour_image
+        contour_image = Image.fromarray(contour_image)
+        self.contour_image = contour_image
 
         # Extract and resize symbols
         symbols = []
@@ -108,17 +112,27 @@ class Model:
             symbols.append((x, y, w, h, resized_symbol))
             print(f"Symbol extracted at (x: {x}, y: {y}, w: {w}, h: {h})")
 
-        return symbols
+        self.symbols = symbols
+
+        return None
     
-    def classify_symbol(self, image):
+    def classify_symbol(self, image: Image) -> tuple[int, float]:
+        """Classifies 45x45 symbols using the neural network.
+
+        Args:
+            image (Image): 45x45 grayscale image
+
+        Returns:
+            tuple[int, float]: tuple with the predicted class index and the confidence
+        """
         input_image = image.astype('float32') / 255.0
         input_image = np.expand_dims(input_image, axis=(0, 1))  # Add batch and channel dimensions
         input_tensor = torch.tensor(input_image, dtype=torch.float32)
         
         # Visualize the image fed into the network
-        plt.imshow(image, cmap='gray')
-        plt.title('Symbol fed into the network')
-        plt.show()
+        # plt.imshow(image, cmap='gray')
+        # plt.title('Symbol fed into the network')
+        # plt.show()
         
         with torch.no_grad():
             output = self.model(input_tensor)
@@ -128,9 +142,9 @@ class Model:
         print(f"Classified Symbol - Class: {predicted_class_idx}, Confidence: {confidence}")
         return predicted_class_idx, confidence
 
-    def classify_all_symbols(self):
+    def classify_all_symbols(self) -> None:
         """
-        Given that the contours have been extracted, classify the symbols
+        Given that the contours have been extracted, classify the symbols that are saved in the model.
         """
         # Pull symbol list
         symbols = self.symbols
@@ -160,10 +174,11 @@ class Model:
             results.append((x, y, symbol))
 
         # Sort results based on their positions
-        results.sort(key=lambda k: (k[1], k[0]))
+        results.sort(key=lambda k: k[0])
 
         # Combine symbols into a readable format
         recognized_text = ''.join([symbol for _, _, symbol in results])
+        self.converted_symbols = results
         print("Recognized Text: ", recognized_text)
 
 class View(tk.Frame):
@@ -208,7 +223,7 @@ class View(tk.Frame):
 
 class Controller:
     """
-    Connects the front end and back end operations
+    Connects the front end and back end operations.
     """
     # Instance Variables
     view: View
@@ -244,39 +259,16 @@ class Controller:
         to button press.
         """
         # Find symbols and display
-        symbols = self.model.find_symbols()
+        self.model.find_symbols()
+        self.model.classify_all_symbols()
 
-        # Filter symbols with low confidence
-        confidence_threshold = 0.7  # Adjust this threshold based on your model's performance
+        # Update UI with contour image
+        image = self.model.contour_image
+        resized_image = image.resize((300, 300), Image.LANCZOS)
+        displayed_image = ImageTk.PhotoImage(resized_image)
+        self.view.detected_image.config(image=displayed_image)
+        self.view.detected_image.image = displayed_image
 
-        classified_symbols = []
-        for x, y, w, h, symbol in symbols:
-            symbol_class, confidence = self.model.classify_symbol(symbol)
-            if confidence > confidence_threshold:
-                classified_symbols.append((x, y, w, h, symbol_class))
-
-        # Map class indices to symbols
-        symbol_list = ['!', '(', ')', '+', ',', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 
-                    '=', 'A', 'C', 'Delta', 'G', 'H', 'M', 'N', 'R', 'S', 'T', 'X', '[', ']', 'alpha', 
-                    'b', 'beta', 'cos', 'd', 'div', 'e', 'exists', 'f', 'forall', 'forward_slash', 'gamma', 
-                    'geq', 'gt', 'i', 'in', 'infty', 'int', 'j', 'k', 'l', 'lambda', 'ldots', 'leq', 'lim', 'log', 
-                    'lt', 'mu', 'neq', 'o', 'p', 'phi', 'pi', 'pm', 'prime', 'q', 'rightarrow', 'sigma', 'sin', 'sqrt', 
-                    'sum', 'tan', 'theta', 'u', 'v', 'w', 'y', 'z', '{', '}']
-        symbol_map = {i: symbol_list[i] for i in range(80)}
-
-        # Generate the results
-        results = []
-        for x, y, w, h, symbol_class in classified_symbols:
-            symbol = symbol_map[symbol_class]
-            results.append((x, y, symbol))
-
-        # Sort results based on their positions
-        results.sort(key=lambda k: (k[1], k[0]))
-
-        # Combine symbols into a readable format
-        recognized_text = ''.join([symbol for _, _, symbol in results])
-        self.view.code_output_label["text"] = recognized_text
-        print("Recognized Text: ", recognized_text)
 
     def set_buttons(self) -> None:
         """
@@ -301,6 +293,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
-
