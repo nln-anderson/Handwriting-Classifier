@@ -44,8 +44,10 @@ class Model:
     input_image: Image
     input_image_path: str
     contour_image: Image
-    symbols: list
-    converted_symbols: list
+    symbols: list[np.ndarray] # Contains the boundaries of contours
+    converted_symbols: list[tuple] # Contains the locations and calculated labels for the symbols
+    classes: list[str] # Contains the possible symbol classes
+    output: str # The final code output
 
     # Methods
     def __init__(self) -> None:
@@ -56,6 +58,7 @@ class Model:
             'leq', 'lim', 'log', 'lt', 'mu', 'neq', 'o', 'p', 'phi', 'pi', 'pm', 'prime', 'q', 'rightarrow', 'sigma',
             'sin', 'sqrt', 'sum', 'tan', 'theta', 'u', 'v', 'w', 'y', 'z', '{', '}'
         ]
+
         self.model = MathNet()
         self.model.load_state_dict(torch.load('./math_net_with_weights_6.pth'))
         self.model.eval()
@@ -159,27 +162,40 @@ class Model:
                 classified_symbols.append((x, y, w, h, symbol_class))
 
         # Map class indices to symbols
-        symbol_list = ['!', '(', ')', '+', ',', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 
-                    '=', 'A', 'C', 'Delta', 'G', 'H', 'M', 'N', 'R', 'S', 'T', 'X', '[', ']', 'alpha', 
-                    'b', 'beta', 'cos', 'd', 'div', 'e', 'exists', 'f', 'forall', 'forward_slash', 'gamma', 
-                    'geq', 'gt', 'i', 'in', 'infty', 'int', 'j', 'k', 'l', 'lambda', 'ldots', 'leq', 'lim', 'log', 
-                    'lt', 'mu', 'neq', 'o', 'p', 'phi', 'pi', 'pm', 'prime', 'q', 'rightarrow', 'sigma', 'sin', 'sqrt', 
-                    'sum', 'tan', 'theta', 'u', 'v', 'w', 'y', 'z', '{', '}']
-        symbol_map = {i: symbol_list[i] for i in range(80)}
+        symbol_map = {i: self.classes[i] for i in range(80)}
 
         # Generate the results
         results = []
         for x, y, w, h, symbol_class in classified_symbols:
             symbol = symbol_map[symbol_class]
-            results.append((x, y, symbol))
+            results.append((x, y, w,h, symbol))
 
         # Sort results based on their positions
         results.sort(key=lambda k: k[0])
+        self.converted_symbols = results
 
         # Combine symbols into a readable format
-        recognized_text = ''.join([symbol for _, _, symbol in results])
-        self.converted_symbols = results
+        recognized_text = ''.join([symbol for _, _, _, _, symbol in results])
+        recognized_text2 = ""
+        for n in range(len(results)):
+            recognized_text2 += results[n][4]
+            recognized_text2 += " "
+
+        self.output = recognized_text2
+
         print("Recognized Text: ", recognized_text)
+        print(recognized_text2)
+        
+
+    def code_conversion(self) -> None:
+        """
+        Converts the now discovered symbols into LaTeX code. Loops through symbols and determines what the code
+        should be.
+        """
+        for n in range(len(self.converted_symbols)):
+            pass
+            
+
 
 class View(tk.Frame):
     """
@@ -273,6 +289,7 @@ class Controller:
         displayed_image = ImageTk.PhotoImage(resized_image)
         self.view.detected_image.config(image=displayed_image)
         self.view.detected_image.image = displayed_image
+        self.view.code_output_label["text"] = self.model.output
 
 
     def set_buttons(self) -> None:
